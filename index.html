@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ARIHIROマルコフ連鎖</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            background: #f0f0f0;
+        }
+
+        canvas {
+            margin-top: 1em;
+            border: 1px solid #aaa;
+        }
+
+        button {
+            font-size: 1.2em;
+            margin: 0.3em;
+            padding: 10px 20px;
+        }
+
+        #output {
+            font-size: 1.2em;
+            margin-top: 1em;
+        }
+
+        .slider-container {
+            margin-top: 1em;
+        }
+
+        table {
+            margin: 1em auto;
+            border-collapse: collapse;
+            width: 60%;
+        }
+
+        th, td {
+            border: 1px solid #999;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #ddd;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ARIHIROマルコフ連鎖</h1>
+    <h3>HIRATAの真ん中にOをぶち込んだら理論上ARIHIROが生成される</h3>
+    <p>多分中３で一番いいひらめき<br></p>
+
+    <br>
+
+    <button onclick="runMarkov()">実行</button>
+    <button onclick="startAuto()">自動試行</button>
+    <button onclick="stopAuto()">停止</button>
+
+    <div class="slider-container">
+        <label for="speedRange">遷移スピード: <span id="speedLabel">500</span> ms</label><br>
+        <input type="range" id="speedRange" min="1" max="500" value="500" step="10" />
+    </div>
+
+    <canvas id="canvas" width="500" height="500"></canvas>
+
+    <div id="output">
+        試行回数: 0<br>
+        最後の結果文字列: -
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>生成文字列</th>
+            </tr>
+        </thead>
+        <tbody id="logTable"></tbody>
+    </table>
+
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const speedSlider = document.getElementById("speedRange");
+        const speedLabel = document.getElementById("speedLabel");
+        const logTable = document.getElementById("logTable");
+        const outputDiv = document.getElementById("output");
+
+        const center = { x: 250, y: 250 };
+        const radius = 150;
+        const labels = ["H", "I", "R", "A", "T", "A", "O"];
+        const nodes = [];
+        let trialCount = 0;
+        let autoRunning = false;
+
+        speedSlider.addEventListener("input", () => {
+            speedLabel.textContent = speedSlider.value;
+        });
+
+        for (let i = 0; i < 6; i++) {
+            const angle = (2 * Math.PI / 6) * i - Math.PI / 2;
+            nodes.push({
+                x: center.x + radius * Math.cos(angle),
+                y: center.y + radius * Math.sin(angle),
+                label: labels[i]
+            });
+        }
+        nodes.push({ x: center.x, y: center.y, label: "O" }); // center
+
+        const edges = [];
+        for (let i = 0; i < 7; i++) {
+            for (let j = i + 1; j < 7; j++) {
+                edges.push([i, j]);
+                edges.push([j, i]);
+            }
+        }
+
+        function drawGraph(current = -1) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (const [a, b] of edges) {
+                ctx.beginPath();
+                ctx.moveTo(nodes[a].x, nodes[a].y);
+                ctx.lineTo(nodes[b].x, nodes[b].y);
+                ctx.strokeStyle = "#aaa";
+                ctx.stroke();
+            }
+
+            for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i];
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 25, 0, 2 * Math.PI);
+                ctx.fillStyle = (i === current) ? "red" : "lightgray";
+                ctx.fill();
+                ctx.strokeStyle = "#444";
+                ctx.stroke();
+                ctx.fillStyle = "#000";
+                ctx.font = "16px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(node.label, node.x, node.y);
+            }
+        }
+
+        function getNeighbors(index) {
+            const neighbors = [];
+            for (const [a, b] of edges) {
+                if (a === index && !neighbors.includes(b)) neighbors.push(b);
+            }
+            return neighbors;
+        }
+
+        function nextState(current) {
+            const neighbors = getNeighbors(current);
+            const idx = Math.floor(Math.random() * neighbors.length);
+            return neighbors[idx];
+        }
+
+        async function runMarkov() {
+            let current = 6; // start from O
+            let result = "";
+            const delay = parseInt(speedSlider.value);
+            const steps = 7;
+
+            for (let i = 0; i < steps; i++) {
+                current = nextState(current);
+                drawGraph(current);
+                result += nodes[current].label;
+                await new Promise(r => setTimeout(r, delay));
+            }
+
+            trialCount++;
+            outputDiv.innerHTML = `試行回数: ${trialCount}<br>最後の結果文字列: ${result}`;
+
+            const row = document.createElement("tr");
+            row.innerHTML = `<td>${trialCount}</td><td>${result}</td>`;
+            logTable.prepend(row);
+
+            if (result === "ARIHIRO") {
+                autoRunning = false;
+                alert("おめでとうございます ご主人様 / お嬢様ぁ♡//･･･ 『ARIHIRO』が生成されました！✨\n自動試行を停止しますぅ♡");
+            }
+        }
+
+        async function startAuto() {
+            if (autoRunning) return;
+            autoRunning = true;
+            while (autoRunning) {
+                await runMarkov();
+                await new Promise(r => setTimeout(r, 1));
+            }
+        }
+
+        function stopAuto() {
+            autoRunning = false;
+        }
+
+        drawGraph();
+    </script>
+    <p>
+        やってること(マニア向け)<br>頂点数７の完全無向グラフが与えられる. <br>'O'の書かれたグラフを起点として隣接する６頂点に対して等確率で移動を行う.<br>移動先の文字を文字列に追加する.これを計７回行う. <br>頂点数が７であることより、文字列生成時に通る頂点がすべて相異なることはあるが、<br>これは"ARIHIRO"の生成よりも確率が低い.
+    </p>
+
+</body>
+</html>
