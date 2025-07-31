@@ -177,6 +177,11 @@
             row.innerHTML = `<td>${trialCount}</td><td>${result}</td>`;
             logTable.prepend(row);
 
+            // Keep only the last 100 rows
+            if (logTable.children.length > 100) {
+                logTable.removeChild(logTable.lastChild);
+            }
+
             if (result === "ARIHIRO") {
                 autoRunning = false;
                 alert("おめでとうございます ご主人様 / お嬢様ぁ♡//･･･ 『ARIHIRO』が生成されました！✨\n自動試行を停止しますぅ♡");
